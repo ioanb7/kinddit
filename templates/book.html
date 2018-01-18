@@ -1,0 +1,44 @@
+{% extends "layout.html" %} {% block body %}
+
+<h1>{{ title }}</h1>
+<div class="pagebreak"></div>
+
+<h2>PAGE OF CONTENTS</h2>
+<div id="pre_toc"></div>
+<nav epub:type="toc" id="toc">
+	<ul>
+		{% for row in articles %}
+		<li>
+			<a class="none {{ 'isfirstarchived' if row.isfirstarchived else '' }}" href="#art_{{ row.customid }}">[{{ row.score }}] {{ row.title }} (in {{ row.sub }})
+				{{ ' [archived]' if row.archived else '' }}</a>
+		</li>
+		{% endfor %}
+	</ul>
+</nav>
+<div class="pagebreak"></div>
+
+{% for row in articles %}
+<section epub:type="chapter" id="c{{ row.customid }}" rid="{{ row.id }}" title="{{ row.title }}">
+	<h3 id="art_{{ row.customid }}">[{{ row.score }}] {{ row.title }} ({{ 'archived ' if row.archived else '' }}in {{ row.sub }})
+		<a href="{{ row.link }}">Link</a>
+	</h3>
+	<p>by {{ row.author }}</p>
+	{% if row.content|length != 0 %}
+	<div class="content">
+		{{ row.content|markdown }}
+		<p>
+			<a href="#pre_toc" class="back-up">Go back to the table of contents</a>
+		</p>
+	</div>
+	{% else %}
+	<div class="content emptycontent">
+		<p>No content! Click the title.</p>
+		<p>
+			<a href="#pre_toc" class="back-up">Go back to the table of contents</a>
+		</p>
+	</div>
+{% endif %}
+
+</section>
+<div class="pagebreak"></div>
+{% endfor %} {% endblock %}

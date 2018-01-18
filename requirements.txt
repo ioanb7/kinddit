@@ -1,0 +1,12 @@
+praw
+jinja2
+markdown
+peewee
+aiomysql
+peewee-async
+google-api-python-client
+aiopg
+filelock
+validators
+yamjam
+urllib3
