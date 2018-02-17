@@ -4,12 +4,15 @@ import peewee_async
 from playhouse.signals import pre_save
 from datetime import datetime, timedelta
 from utils import get_config
+import pymysql
+
 
 
 
 database_conn = get_config()["database"]
+database_proxy = peewee.Proxy()
+database = None
 
-database = peewee_async.MySQLDatabase(database=database_conn['name'],host=database_conn['host'],user=database_conn['user'],password=database_conn['password'])
 
 
 class UserModel(peewee.Model):
@@ -27,7 +30,7 @@ class UserModel(peewee.Model):
     archive = peewee.TextField(default="")
 
     class Meta:
-        database = database
+        database = database_proxy
         db_table = 'user'
 
 class SubscribtionModel(peewee.Model):
@@ -37,7 +40,7 @@ class SubscribtionModel(peewee.Model):
     per_email = peewee.IntegerField(default=10)
 
     class Meta:
-        database = database
+        database = database_proxy
         db_table = 'subscription'
 
 class ReportModel(peewee.Model):
@@ -55,7 +58,7 @@ class ReportModel(peewee.Model):
     is_recurrent = peewee.BooleanField()
 
     class Meta:
-        database = database
+        database = database_proxy
         db_table = 'report'
 
 
@@ -67,7 +70,7 @@ class ContactModel(peewee.Model):
     created_date = peewee.DateTimeField(default=datetime.now)
 
     class Meta:
-        database = database
+        database = database_proxy
         db_table = 'contact'
 
 class KeyValueModel(peewee.Model):
@@ -77,20 +80,46 @@ class KeyValueModel(peewee.Model):
     created_date = peewee.DateTimeField(default=datetime.now)
 
     class Meta:
-        database = database
+        database = database_proxy
         db_table = 'keyvalue'
-        
+
+
+def assign_new_db():
+    global database
+    global database_proxy
+    database = peewee_async.MySQLDatabase(
+        database=database_conn['name'],
+        host=database_conn['host'],
+        user=database_conn['user'],
+        password=database_conn['password'])
+    database_proxy.initialize(database)
+
+    UserModel.create_table(True)
+    SubscribtionModel.create_table(True)
+    ReportModel.create_table(True)
+    ContactModel.create_table(True)
+    KeyValueModel.create_table(True)
+
+
 def get_db():
     global database
-    if database == None or database.is_closed():
-        try:
-            database = peewee_async.MySQLDatabase(database=database_conn['name'],host=database_conn['host'],user=database_conn['user'],password=database_conn['password'])
-            UserModel.create_table(True)
-            SubscribtionModel.create_table(True)
-            ReportModel.create_table(True)
-            ContactModel.create_table(True)
-            KeyValueModel.create_table(True)
-        except peewee.OperationalError:
-            #couldn't connect
-            raise
-    return database
+    global database_proxy
+
+    if database == None:
+        assign_new_db()
+        return database_proxy
+    elif database.is_closed():
+        assign_new_db()
+        #log and see if this actually works.
+        print("WORKS!, database was seen as closed and remade.")
+        return database_proxy
+
+    try:
+        database_proxy.execute_sql('select 1;')
+        return database_proxy
+    except peewee.OperationalError:
+        assign_new_db()
+    except pymysql.err.OperationalError:
+        assign_new_db()
+
+    return database_proxy
